@@ -1,0 +1,16 @@
+# Data generation & manipulation
+pandas>=1.5.3
+numpy>=1.25.2
+
+# Real-time communication & backend APIs
+fastapi>=0.95.1
+uvicorn>=0.22.0
+requests>=2.31.0
+
+# Machine Learning training & modeling
+scikit-learn>=1.2.2
+torch>=2.0.1
+
+# Database operations
+supabase>=2.31.0
+python-dotenv>=1.0.0

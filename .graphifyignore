@@ -1,0 +1,11 @@
+.venv/
+.env
+.git/
+.agent_pipeline/
+node_modules/
+*.html
+*.json
+*.md
+*.json
+*.txt
+graphify-out/
