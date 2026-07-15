@@ -40,3 +40,15 @@ Core dependency areas include data generation and manipulation, backend APIs, ma
 ## Repository Hygiene
 
 Generated outputs, local virtual environments, environment secrets, and agent pipeline files are excluded from version control through the repository ignore files.
+
+
+## Step 2 : 
+
+🚀 Recent Updates & Ingestion Pipeline
+
+### Telemetry & Automated Security Escalation (July 2026)
+Successfully established a resilient, end-to-end cloud data logging architecture with full relational integrity.
+
+- **Dual-Stage Ingestion:** Integrated `data_pipeline/orchestrator.py` with `backend/supabase_client.py` to route streaming synthetic telemetry safely.
+- **Relational Threat Triage:** Implemented dynamic evaluation where incoming traffic details stream continuously into `system_logs`, while high-risk anomalies (`medium`, `high`, `critical`) are conditionally escalated instantly to `security_alerts` via relational UUID tracking.
+- **Resilience Blueprint:** Injected dynamic path mapping (`sys.path`) to eliminate module resolution friction and handled terminal interrupts gracefully (`KeyboardInterrupt`) to prevent pipeline crash traces during shutdowns.
