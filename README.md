@@ -84,7 +84,9 @@ Aegis Metrics/
 │       └── dashboard_metrics_view.sql # Aggregated metrics VIEW
 ├── data_pipeline/
 │   ├── generator.py                   # Synthetic smart-city log generator
-│   └── orchestrator.py                # Continuous ingestion + alert escalation loop
+│   ├── orchestrator.py                # Continuous ingestion + alert escalation loop
+│   ├── bulk_injector.py               # Stage 4 bulk array-batch injector (15k logs + lateral movement)
+│   └── gnn_extractor.py               # Stage 4 GNN dataset extractor (graph + node features)
 ├── frontend/
 │   ├── index.html
 │   ├── package.json
@@ -97,7 +99,11 @@ Aegis Metrics/
 │       ├── api.js                     # Centralized API client
 │       ├── KpiCard.jsx                # Reusable KPI metric card
 │       └── AlertsTable.jsx            # Active threat feed table
-├── models/                            # Model-related assets
+├── models/
+│   └── dataset/                       # Stage 4 GNN training artifacts (Colab-ready)
+│       ├── graph.json                 # Full graph payload (index map, edge_index, features)
+│       ├── node_features.csv          # N x 4 per-device feature matrix
+│       └── edge_index.csv             # Directed edge list (COO source,target pairs)
 ├── requirements.txt                   # Python dependencies
 └── README.md
 ```
@@ -334,6 +340,45 @@ python backend/api_server.py
 # Terminal 2 — Frontend
 cd frontend && npm install && npm run dev
 ```
+
+### ✅ Stage 4 — Spatio-Temporal GNN Data Preparation
+
+Prepared a complete, Colab-ready graph dataset for training a Spatio-Temporal Graph Neural Network (GNN) over the smart-city device mesh. This stage added a high-throughput bulk injector and a graph extractor that together turn 15,000+ raw telemetry rows into PyTorch Geometric–loadable structural arrays.
+
+#### 1. Data Pipeline Enhancements
+
+- **Bulk array-batch injection:** [`data_pipeline/bulk_injector.py`](data_pipeline/bulk_injector.py) replaces row-by-row inserts with native PostgreSQL array batching. Each 1,000-row chunk is sent in a single `.insert()` call (one network round-trip per chunk) via [`bulk_insert_system_logs()`](backend/supabase_client.py:61) and [`bulk_insert_security_alerts()`](backend/supabase_client.py:102), eliminating the remote-database network bottleneck that throttles per-row loops.
+- **Scale:** Generates and ingests **15,000+** synthetic `system_logs` plus their matching `security_alerts` in a single run, with pre-generated UUID4 `id`s so every returned database row can be correlated back to its source log regardless of response order.
+- **High-risk lateral threat propagation:** A [`simulate_lateral_movement()`](data_pipeline/bulk_injector.py:85) pass walks the declared device topology and, with a 40% probability per critical log, spawns a follow-up high-risk log on a connected device 2–5 seconds later — modeling threat spread across the municipal mesh so the GNN has real spatio-temporal propagation structure to learn from.
+
+```bash
+python data_pipeline/bulk_injector.py
+```
+
+#### 2. GNN Dataset Extractor
+
+[`data_pipeline/gnn_extractor.py`](data_pipeline/gnn_extractor.py) collapses the live Supabase snapshot into a static spatial graph and serializes it for PyTorch Geometric training:
+
+- **Paging through Supabase:** PostgREST caps each response at 1,000 rows, so [`_fetch_all_rows()`](data_pipeline/gnn_extractor.py:65) slides an inclusive `.range()` window (using the `count="exact"` header, with a short-page fallback) to pull every `system_logs` and `security_alerts` row — only the columns the GNN needs, keeping the wire payload small even at 15k+ rows.
+- **Device → integer index mapping:** [`build_device_index_map()`](data_pipeline/gnn_extractor.py:130) assigns every unique device name a stable integer index `0..N-1` (sorted for reproducibility), unioning devices seen in the logs with every device in the declared topology so `edge_index` never references a missing node.
+- **Spatial graph topology (COO):** [`build_edge_index()`](data_pipeline/gnn_extractor.py:156) emits one directed edge per declared `(src → tgt)` connection as two parallel index lists — the COO row-pair form that maps 1:1 onto `torch.tensor([sources, targets])` (shape `2 × E`).
+- **4-dimensional node features:** [`compute_node_features()`](data_pipeline/gnn_extractor.py:196) builds an `N × 4` matrix per device — `total_logs`, `avg_processing_time_ms`, `avg_payload_size_bytes`, and `total_active_alerts` (unresolved alerts joined to the device via `system_logs.id == security_alerts.log_id`).
+
+```bash
+python data_pipeline/gnn_extractor.py
+```
+
+#### 3. Artifact Outputs
+
+The extractor writes three Colab-ready files to [`models/dataset/`](models/dataset/):
+
+| File | Format | Contents |
+|------|--------|----------|
+| [`graph.json`](models/dataset/graph.json) | JSON | Full structural payload — `device_index_map`, COO `edge_index` (`2 × E`), the `N × 4` `node_features` matrix, `feature_names`, and metadata |
+| [`node_features.csv`](models/dataset/node_features.csv) | CSV | One row per device (`device_name`, `device_index`, + the 4 feature columns) |
+| [`edge_index.csv`](models/dataset/edge_index.csv) | CSV | One row per directed edge (`source_index`, `target_index`) |
+
+These artifacts are ready to be dragged straight into a Google Colab notebook and loaded into a PyTorch Geometric `Data` object for GNN training.
 
 ---
 
