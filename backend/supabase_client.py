@@ -56,3 +56,74 @@ def trigger_security_alert(alert_data: dict) -> str:
             
     logger.warning(f"[MOCK DB] Triggered security alert linked to log_id: {alert_data.get('log_id')}")
     return "mock-alert-id"
+
+
+def bulk_insert_system_logs(logs: list) -> list:
+    """
+    Bulk-inserts a list of system log dicts in a single .insert() call.
+
+    This performs true bulk array batching (one network round-trip for the
+    whole chunk) instead of a row-by-row loop, preventing remote database
+    network bottlenecks during large Stage 4 GNN data preparation runs.
+
+    Args:
+        logs (list[dict]): List of log payloads, each matching the system_logs
+                           schema. Callers should pre-generate a UUID4 `id` per
+                           row so returned rows can be correlated back reliably.
+
+    Returns:
+        list[str]: The UUIDs of the inserted rows, read from the database
+                   response. Returns an empty list on failure. In
+                   mock/development mode, echoes back the client-supplied UUIDs
+                   so downstream security_alerts can still be wired up.
+    """
+    if not logs:
+        return []
+
+    if supabase:
+        try:
+            # A single bulk .insert() with the full array of dict payloads.
+            response = supabase.table("system_logs").insert(logs).execute()
+            if response.data:
+                # Read the database-returned UUID for each inserted row.
+                return [row.get("id") for row in response.data]
+            return []
+        except Exception as e:
+            logger.error(f"Database error during bulk_insert_system_logs: {e}")
+            return []
+
+    # Mock/development mode: echo back the client-supplied UUIDs (or generate
+    # mock ones) so the pipeline can still correlate logs with security_alerts.
+    mock_ids = [log.get("id") or str(uuid.uuid4()) for log in logs]
+    logger.info(f"[MOCK DB] Bulk inserted {len(mock_ids)} system logs.")
+    return mock_ids
+
+
+def bulk_insert_security_alerts(alerts: list) -> list:
+    """
+    Bulk-inserts a list of security alert dicts in a single .insert() call.
+
+    Args:
+        alerts (list[dict]): List of alert payloads, each matching the
+                             security_alerts schema (log_id, anomaly_score,
+                             model_source, risk_level, is_resolved).
+
+    Returns:
+        list[str]: The alert_id UUIDs of the inserted rows, read from the
+                   database response. Returns an empty list on failure.
+    """
+    if not alerts:
+        return []
+
+    if supabase:
+        try:
+            response = supabase.table("security_alerts").insert(alerts).execute()
+            if response.data:
+                return [row.get("alert_id") for row in response.data]
+            return []
+        except Exception as e:
+            logger.error(f"Database error during bulk_insert_security_alerts: {e}")
+            return []
+
+    logger.info(f"[MOCK DB] Bulk inserted {len(alerts)} security alerts.")
+    return ["mock-alert-id" for _ in alerts]

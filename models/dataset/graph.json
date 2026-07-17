@@ -1,0 +1,148 @@
+{
+  "description": "Spatial graph snapshot for PyTorch Geometric GNN training.",
+  "feature_names": [
+    "total_logs",
+    "avg_processing_time_ms",
+    "avg_payload_size_bytes",
+    "total_active_alerts"
+  ],
+  "num_nodes": 9,
+  "device_index_map": {
+    "NETWORK_HUB_A": 0,
+    "NETWORK_HUB_B": 1,
+    "PUMP_CONTROL_01": 2,
+    "PUMP_CONTROL_02": 3,
+    "PUMP_CONTROL_03": 4,
+    "STREET_LIGHT_HUB_12": 5,
+    "TRAFFIC_LIGHT_NODE_01": 6,
+    "TRAFFIC_LIGHT_NODE_04": 7,
+    "WATER_PUMP_CENTRAL": 8
+  },
+  "edge_index": [
+    [
+      7,
+      7,
+      7,
+      8,
+      8,
+      8,
+      5,
+      5,
+      5,
+      6,
+      6,
+      6,
+      0,
+      0,
+      0,
+      1,
+      1,
+      1,
+      4,
+      4,
+      4,
+      2,
+      2,
+      2,
+      3,
+      3,
+      3
+    ],
+    [
+      6,
+      0,
+      4,
+      4,
+      7,
+      0,
+      0,
+      1,
+      2,
+      7,
+      2,
+      1,
+      7,
+      8,
+      5,
+      5,
+      6,
+      0,
+      8,
+      6,
+      3,
+      1,
+      3,
+      5,
+      4,
+      2,
+      0
+    ]
+  ],
+  "num_edges": 27,
+  "node_features": [
+    [
+      1651,
+      77.49576014536648,
+      2514.4397334948517,
+      277
+    ],
+    [
+      1785,
+      77.27904761904769,
+      2536.0498599439775,
+      324
+    ],
+    [
+      1674,
+      76.33004778972509,
+      2537.3727598566306,
+      279
+    ],
+    [
+      1714,
+      77.76003500583427,
+      2506.9480746791132,
+      304
+    ],
+    [
+      1740,
+      76.20609195402294,
+      2572.8201149425286,
+      327
+    ],
+    [
+      1889,
+      76.79159369527152,
+      2542.1155866900176,
+      306
+    ],
+    [
+      1674,
+      78.04516129032257,
+      2606.9127837514934,
+      291
+    ],
+    [
+      1901,
+      76.57484131563761,
+      2506.471436814772,
+      290
+    ],
+    [
+      1838,
+      77.36975088967958,
+      2534.7455516014234,
+      315
+    ]
+  ],
+  "metadata": {
+    "topology_source": "data_pipeline.bulk_injector.DEVICE_CONNECTIONS",
+    "edge_format": "COO - edge_index[0]=sources, edge_index[1]=targets",
+    "feature_order": [
+      "total_logs",
+      "avg_processing_time_ms",
+      "avg_payload_size_bytes",
+      "total_active_alerts"
+    ]
+  }
+}
