@@ -10,7 +10,7 @@ requests>=2.31.0
 # Machine Learning training & modeling
 scikit-learn>=1.2.2
 torch>=2.0.1
-torch-geometric >= 2.8.0
+torch-geometric >= 2.8.0.post1
 
 # Database operations
 supabase>=2.31.0

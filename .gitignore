@@ -24,3 +24,4 @@ yarn-error.log*
 models/gnn_threat_model.pt
 models/dataset/*.csv
 models/dataset/*.json
+models/dataset/*.pkl
