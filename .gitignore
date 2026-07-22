@@ -18,3 +18,9 @@ frontend/dist/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+
+# GNN Artifacts & Models
+models/gnn_threat_model.pt
+models/dataset/*.csv
+models/dataset/*.json
