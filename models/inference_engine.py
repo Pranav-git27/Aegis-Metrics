@@ -3,8 +3,20 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import pandas as pd
+from dotenv import load_dotenv
+from supabase import create_client
 from torch_geometric.data import Data
 from torch_geometric.nn import GCNConv, GATConv
+
+load_dotenv()
+
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_KEY")
+supabase = (
+    create_client(SUPABASE_URL, SUPABASE_KEY)
+    if SUPABASE_URL and SUPABASE_KEY
+    else None
+)
 
 # ---------------------------------------------------------
 # 1. MODEL ARCHITECTURE DEFINITION
@@ -64,7 +76,33 @@ def run_gnn_inference():
         probabilities = F.softmax(logits, dim=1)  # Convert raw logits to 0.0 - 1.0 confidence
         threat_scores = probabilities[:, 1].tolist() # Probability of class 1 (High Risk)
 
-    # 4. Generate Risk Report
+    # 4. Persist GNN threat assessments to Supabase
+    payload = [
+        {
+            "device_name": str(device_name),
+            "threat_score": float(score),
+            "status": "CRITICAL" if float(score) >= 0.8 else "HEALTHY",
+        }
+        for device_name, score in zip(df_features["device_name"], threat_scores)
+    ]
+
+    try:
+        if supabase is None:
+            raise RuntimeError(
+                "Supabase credentials are missing. Set SUPABASE_URL and either "
+                "SUPABASE_SERVICE_ROLE_KEY or SUPABASE_KEY."
+            )
+
+        response = supabase.table("gnn_threat_logs").insert(payload).execute()
+        inserted_count = len(response.data or [])
+        print(
+            f"Successfully inserted {inserted_count} records into "
+            "gnn_threat_logs"
+        )
+    except Exception as exc:
+        print(f"Failed to insert records into gnn_threat_logs: {exc}")
+
+    # 5. Generate Risk Report
     results = []
     print("\n=======================================================")
     print("      LIVE SMART CITY GNN THREAT ASSESSMENT RESULTS    ")
