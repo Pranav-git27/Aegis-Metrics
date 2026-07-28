@@ -1,18 +1,26 @@
 
 
-# 🛡️ Aegis Metrics
+# 🛡️ Aegis Metrics / Sentinel-Audit
 
-**DevSecOps Telemetry & Threat-Triage Platform for Smart-City Infrastructure**
+![Python](https://img.shields.io/badge/Python-3.9%2B-0d1117?style=flat-square&logo=python&logoColor=58a6ff)
+![PyTorch](https://img.shields.io/badge/PyTorch-GNN-0d1117?style=flat-square&logo=pytorch&logoColor=ee4c2c)
+![Supabase](https://img.shields.io/badge/Supabase-Realtime-0d1117?style=flat-square&logo=supabase&logoColor=3ecf8e)
+![React](https://img.shields.io/badge/React-Vite-0d1117?style=flat-square&logo=react&logoColor=61dafb)
+![Status](https://img.shields.io/badge/Defense-Autonomous-0d1117?style=flat-square)
 
-Aegis Metrics is an end-to-end security monitoring system that generates synthetic municipal system request logs, streams them into a cloud database, triages anomalies into actionable security alerts, and visualizes everything on a real-time dashboard.
+**Autonomous DevSecOps Threat Detection, Containment & Audit Platform for Smart-City Infrastructure**
+
+Aegis Metrics, also known as **Sentinel-Audit**, is an autonomous DevSecOps platform that converts smart-city telemetry into graph-aware threat decisions and immediate defensive action. It combines PyTorch Geometric GNN inference, Supabase PostgreSQL and Realtime streams, automated device quarantine, immutable mitigation auditing, and a live dark-theme security dashboard.
 
 **Key capabilities:**
 
-- 🔄 Continuous synthetic telemetry generation with anomaly injection
-- ⚡ Relational threat triage — anomalies escalate instantly to security alerts
-- 📊 Aggregated dashboard metrics via a PostgreSQL view
-- 🖥️ Real-time React dashboard with auto-polling, KPI cards, and an active threat feed
-- ✅ One-click alert resolution with optimistic UI updates
+- 🔄 High-volume synthetic telemetry generation with lateral-movement simulation
+- 🧠 PyTorch GNN inference over the municipal device topology
+- 🚨 Persistent device-level assessments in `gnn_threat_logs`
+- 🔒 Autonomous quarantine through `network_policy_state`
+- 🧾 Automated containment evidence in `gnn_mitigation_actions`
+- ⚡ Supabase Realtime streams for threat, policy, and mitigation events
+- 🖥️ React threat-operations dashboard with KPI and incident visibility
 
 ---
 
@@ -25,9 +33,11 @@ Aegis Metrics is an end-to-end security monitoring system that generates synthet
 - [Environment Configuration](#environment-configuration)
 - [Database Setup](#database-setup)
 - [Quick Start](#quick-start)
-  - [1. Data Pipeline (Ingestion)](#1-data-pipeline-ingestion)
-  - [2. Backend API Server](#2-backend-api-server)
-  - [3. Frontend Dashboard](#3-frontend-dashboard)
+  - [1. Data Injection](#1-data-injection)
+  - [2. GNN Threat Inference](#2-gnn-threat-inference)
+  - [3. Autonomous Remediation Agent](#3-autonomous-remediation-agent)
+  - [4. Frontend Dashboard](#4-frontend-dashboard)
+  - [Optional Backend API](#optional-backend-api)
 - [API Reference](#api-reference)
 - [Data Model](#data-model)
 - [Development Roadmap](#development-roadmap)
@@ -37,76 +47,87 @@ Aegis Metrics is an end-to-end security monitoring system that generates synthet
 
 ## Overview
 
-Aegis Metrics simulates a smart-city security operations center. Synthetic request logs are generated for municipal systems (traffic-light nodes, water pumps, street-light hubs), ingested into a Supabase (PostgreSQL) database, and continuously evaluated for anomalies. High-risk traffic is escalated into `security_alerts` with relational UUID tracking, while a FastAPI backend exposes aggregated analytics and a React frontend renders a live threat-triage dashboard.
+Aegis Metrics models a smart-city security operations center as a connected device graph. Synthetic telemetry enters Supabase through the bulk injector, is transformed into PyTorch Geometric features, and is evaluated by a trained GNN. Every device assessment is persisted to `gnn_threat_logs`; scores at or above `0.80` activate the remediation agent, which upserts a `QUARANTINED` network policy and records lateral-movement containment in the mitigation audit stream.
 
-**Key capabilities:**
-
-- 🔄 Continuous synthetic telemetry generation with anomaly injection
-- ⚡ Relational threat triage — anomalies escalate instantly to security alerts
-- 📊 Aggregated dashboard metrics via a PostgreSQL view
-- 🖥️ Real-time React dashboard with auto-polling, KPI cards, and an active threat feed
-- ✅ One-click alert resolution with optimistic UI updates
+Supabase Realtime publishes threat assessments, policy state changes, and mitigation actions to subscribed services and the web dashboard. The existing FastAPI analytics and relational `security_alerts` workflow remain available alongside this autonomous GNN defense loop.
 
 ---
 
 ## Architecture
 
-```
-┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│  data_pipeline  │────▶│     Supabase     │◀────│    backend      │
-│  (generator +   │     │   (PostgreSQL)   │     │  (FastAPI API)  │
-│   orchestrator) │     │                  │     │                 │
-└─────────────────┘     └──────────────────┘     └────────┬────────┘
-                        • system_logs                     │
-                        • security_alerts                 │ REST
-                        • dashboard_metrics (view)        ▼
-                                               ┌─────────────────┐
-                                               │    frontend     │
-                                               │  (React + Vite) │
-                                               └─────────────────┘
+```text
+┌──────────────────┐   ┌─────────────┐   ┌────────────────────────────┐
+│ bulk_injector.py │──▶│ system_logs │──▶│ models/inference_engine.py │
+└──────────────────┘   └─────────────┘   └─────────────┬──────────────┘
+                                                       │ PyTorch GNN scores
+                                                       ▼
+                                            ┌─────────────────────┐
+                                            │   gnn_threat_logs   │
+                                            └──────────┬──────────┘
+                                                       │ score >= 0.80
+                                                       ▼
+                                      ┌───────────────────────────────────┐
+                                      │ datapipeline/remediation_agent.py │
+                                      └─────────────────┬─────────────────┘
+                                                        │ upsert + audit
+                              ┌─────────────────────────┴────────────────────────┐
+                              ▼                                                  ▼
+                 ┌──────────────────────┐                          ┌────────────────────────┐
+                 │ network_policy_state │                          │ gnn_mitigation_actions │
+                 └───────────┬──────────┘                          └───────────┬────────────┘
+                             └─────────────────────┬────────────────────────────┘
+                                                   ▼
+                                      ┌─────────────────────┐
+                                      │  Supabase Realtime  │
+                                      └──────────┬──────────┘
+                                                 ▼
+                                      ┌─────────────────────┐
+                                      │    Web Dashboard    │
+                                      │ React + Vite + REST │
+                                      └─────────────────────┘
 ```
 
-- **Data Pipeline** — Generates batches of synthetic logs and streams them to Supabase every few seconds, conditionally escalating `medium`/`high`/`critical` anomalies into security alerts.
-- **Backend** — A FastAPI service that queries Supabase for aggregated overview metrics and active alerts, and exposes alert-resolution endpoints.
-- **Frontend** — A Vite + React + Tailwind dashboard that polls the backend on a 4-second cadence and renders KPI cards plus a live threat feed.
+- **Telemetry layer** — Generates bulk smart-city request events, including connected-device lateral-movement patterns, and stores them in `system_logs`.
+- **Inference layer** — Loads graph features and trained PyTorch weights, computes per-device threat probabilities, and inserts assessment batches into `gnn_threat_logs`.
+- **Remediation layer** — Polls high-risk assessments, quarantines affected devices through conflict-safe policy upserts, emits containment logs, and writes audit records.
+- **Streaming and presentation layer** — Supabase Realtime publishes database changes for live dashboard consumption; FastAPI continues to provide aggregate REST analytics and alert controls.
 
 ---
 
 ## Project Structure
 
-```
+```text
 Aegis Metrics/
 ├── backend/
-│   ├── api_server.py                  # FastAPI application & REST endpoints
-│   ├── supabase_client.py             # Supabase client + DB insert/trigger helpers
-│   ├── schema.sql                     # system_logs & security_alerts table DDL
+│   ├── api_server.py                         # FastAPI application and REST endpoints
+│   ├── supabase_client.py                    # Shared Supabase ingestion helpers
+│   ├── schema.sql                            # Core telemetry and alert DDL
+│   ├── database/
+│   │   └── gnn_remediation_schema.sql        # GNN, policy, audit, and Realtime DDL
 │   └── migrations/
-│       └── dashboard_metrics_view.sql # Aggregated metrics VIEW
+│       └── dashboard_metrics_view.sql        # Aggregated metrics view
 ├── data_pipeline/
-│   ├── generator.py                   # Synthetic smart-city log generator
-│   ├── orchestrator.py                # Continuous ingestion + alert escalation loop
-│   ├── bulk_injector.py               # Stage 4 bulk array-batch injector (15k logs + lateral movement)
-│   └── gnn_extractor.py               # Stage 4 GNN dataset extractor (graph + node features)
-├── frontend/
-│   ├── index.html
-│   ├── package.json
-│   ├── vite.config.js
-│   ├── tailwind.config.js
-│   ├── postcss.config.js
-│   └── src/
-│       ├── main.jsx                   # React entry point
-│       ├── App.jsx                    # Dashboard shell, polling & state
-│       ├── api.js                     # Centralized API client
-│       ├── KpiCard.jsx                # Reusable KPI metric card
-│       └── AlertsTable.jsx            # Active threat feed table
+│   ├── generator.py                          # Synthetic telemetry generator
+│   ├── orchestrator.py                       # Continuous legacy ingestion loop
+│   ├── bulk_injector.py                      # Bulk telemetry and lateral movement
+│   └── gnn_extractor.py                      # Graph topology and feature extraction
+├── datapipeline/
+│   └── remediation_agent.py                  # Autonomous quarantine and audit worker
 ├── models/
-│   └── dataset/                       # Stage 4 GNN training artifacts (Colab-ready)
-│       ├── graph.json                 # Full graph payload (index map, edge_index, features)
-│       ├── node_features.csv          # N x 4 per-device feature matrix
-│       └── edge_index.csv             # Directed edge list (COO source,target pairs)
-├── requirements.txt                   # Python dependencies
+│   ├── inference_engine.py                   # PyTorch GNN inference and threat persistence
+│   ├── gnn_threat_model.pt                   # Trained model weights (local artifact)
+│   └── dataset/
+│       ├── graph.json                        # Full graph payload
+│       ├── node_features.csv                 # Per-device GNN feature matrix
+│       └── edge_index.csv                    # Directed COO edge list
+├── frontend/
+│   ├── package.json
+│   └── src/                                  # React dashboard and API client
+├── requirements.txt
 └── README.md
 ```
+
+> The canonical schema reference is [`backend/database/gnn_remediation_schema.sql`](backend/database/gnn_remediation_schema.sql). If upgrading an older checkout where it exists directly under `backend/`, relocate it into `backend/database/` before applying the documented setup.
 
 ---
 
@@ -125,101 +146,110 @@ Aegis Metrics/
 
 The backend and pipeline read Supabase credentials from a local `.env` file. Create one in the project root:
 
-```bash
-# .env
+```dotenv
 SUPABASE_URL=https://your-project-ref.supabase.co
-SUPABASE_KEY=your-supabase-service-role-or-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+# Optional compatibility fallback used by the inference engine and legacy modules:
+SUPABASE_KEY=your-supabase-key
 ```
 
-> **Note:** If `SUPABASE_URL` or `SUPABASE_KEY` are missing (or the `supabase` package isn't installed), the backend and pipeline automatically fall back to a **mock/development mode** that returns zeroed metrics and generated UUIDs. This lets you run the stack locally without a live database.
+> Use `SUPABASE_SERVICE_ROLE_KEY` for the autonomous inference and remediation workers because they perform privileged inserts and policy updates. Keep `.env` local, never expose a service-role key to the browser, and never commit it to source control.
 
 ---
 
 ## Database Setup
 
-Apply the schema and the metrics view against your Supabase (PostgreSQL) database. Run the SQL in the Supabase SQL Editor or via `psql`:
+Apply the core schema in [`backend/schema.sql`](backend/schema.sql), the dashboard view in [`backend/migrations/dashboard_metrics_view.sql`](backend/migrations/dashboard_metrics_view.sql), and the autonomous-defense schema in [`backend/database/gnn_remediation_schema.sql`](backend/database/gnn_remediation_schema.sql) through the Supabase SQL Editor. The remediation schema contains the following DDL:
 
-1. **Create the tables** ([`backend/schema.sql`](backend/schema.sql)):
+```sql
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
-   ```sql
-   -- system_logs: raw request telemetry
-   -- security_alerts: anomaly metadata linked to log records (FK → system_logs.id)
-   ```
+CREATE TABLE IF NOT EXISTS public.gnn_threat_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    device_name TEXT NOT NULL,
+    threat_score DOUBLE PRECISION NOT NULL,
+    status TEXT NOT NULL DEFAULT 'CRITICAL',
+    detected_at TIMESTAMPTZ DEFAULT NOW()
+);
 
-2. **Create the aggregated view** ([`backend/migrations/dashboard_metrics_view.sql`](backend/migrations/dashboard_metrics_view.sql)):
+CREATE TABLE IF NOT EXISTS public.network_policy_state (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    device_name TEXT UNIQUE NOT NULL,
+    status TEXT NOT NULL DEFAULT 'NORMAL',
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
 
-   ```sql
-   -- dashboard_metrics: single-row view with total_logs, total_alerts,
-   -- anomaly_rate_percentage, and critical_alerts_count
-   ```
+CREATE TABLE IF NOT EXISTS public.gnn_mitigation_actions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    device_name TEXT NOT NULL,
+    action_taken TEXT NOT NULL,
+    threat_score DOUBLE PRECISION NOT NULL,
+    status TEXT NOT NULL DEFAULT 'EXECUTED',
+    executed_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.gnn_threat_logs DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.network_policy_state DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.gnn_mitigation_actions DISABLE ROW LEVEL SECURITY;
+
+ALTER PUBLICATION supabase_realtime ADD TABLE public.gnn_threat_logs;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.network_policy_state;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.gnn_mitigation_actions;
+```
+
+> `network_policy_state.device_name` is unique because the remediation agent uses it as the `ON CONFLICT` target when atomically creating or updating quarantine state. Publication commands should only be applied once per table; Supabase reports an error if a table is already a member of `supabase_realtime`.
 
 ---
 
 ## Quick Start
 
-Run the three components in separate terminals. The recommended order is **Pipeline → Backend → Frontend**.
+Install the Python dependencies from [`requirements.txt`](requirements.txt), configure the Supabase environment variables, apply the database schemas, and then run the autonomous pipeline in this order.
 
-### 1. Data Pipeline (Ingestion)
+### 1. Data Injection
 
-Installs Python dependencies and starts the continuous ingestion loop that streams synthetic logs to Supabase and escalates anomalies.
+Generate bulk telemetry and lateral-movement samples, then insert them into `system_logs`:
 
 ```bash
-# Install Python dependencies
-pip install -r requirements.txt
-
-# Start the continuous ingestion pipeline (2s interval by default)
-python data_pipeline/orchestrator.py
+python datapipeline/bulk_injector.py
 ```
 
-To generate a one-off batch of synthetic logs without writing to the database:
+### 2. GNN Threat Inference
+
+Load the graph dataset and trained model, compute device threat scores, and persist assessments to `gnn_threat_logs`:
 
 ```bash
-python data_pipeline/generator.py
+python models/inference_engine.py
 ```
 
-> Press `Ctrl+C` to stop the orchestrator gracefully (it handles `KeyboardInterrupt` cleanly).
+### 3. Autonomous Remediation Agent
 
----
-
-### 2. Backend API Server
-
-Starts the FastAPI service on `http://localhost:8000`.
+Start the continuous worker that detects scores at or above `0.80`, quarantines devices, and writes mitigation audits:
 
 ```bash
-# From the project root
-python backend/api_server.py
+python datapipeline/remediation_agent.py
 ```
 
-The API will be available at:
+The worker shuts down cleanly on `Ctrl+C`. To process the currently qualifying threat rows once and exit, add the `--once` option.
 
-- **Base URL:** `http://localhost:8000`
-- **Interactive docs (Swagger UI):** `http://localhost:8000/docs`
-- **Health check:** `http://localhost:8000/`
+### 4. Frontend Dashboard
 
----
-
-### 3. Frontend Dashboard
-
-Installs Node dependencies and launches the Vite dev server on `http://localhost:5173`.
+From [`frontend/`](frontend/), launch the Vite development server:
 
 ```bash
-# Install frontend dependencies
-cd frontend
-npm install
-
-# Start the development server (opens browser automatically)
 npm run dev
 ```
 
-Additional frontend scripts:
+The dashboard is served on `http://localhost:5173` by default. Install packages with `npm install` first when setting up a fresh checkout.
 
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start the Vite dev server (port 5173) |
-| `npm run build` | Production build to `dist/` |
-| `npm run preview` | Preview the production build locally |
+### Optional Backend API
 
-> The frontend expects the backend to be running on `http://localhost:8000` (configured in [`frontend/src/api.js`](frontend/src/api.js)). CORS is pre-configured to allow the Vite dev origin.
+Run the FastAPI analytics and alert-management service from the project root:
+
+```bash
+python backend/api_server.py
+```
+
+The API is available at `http://localhost:8000`, with interactive Swagger documentation at `http://localhost:8000/docs`. The frontend API base URL is configured in [`frontend/src/api.js`](frontend/src/api.js).
 
 ---
 
@@ -379,6 +409,35 @@ The extractor writes three Colab-ready files to [`models/dataset/`](models/datas
 | [`edge_index.csv`](models/dataset/edge_index.csv) | CSV | One row per directed edge (`source_index`, `target_index`) |
 
 These artifacts are ready to be dragged straight into a Google Colab notebook and loaded into a PyTorch Geometric `Data` object for GNN training.
+
+### ✅ Stage 5 — GNN Threat Inference Engine
+
+Operationalized the trained graph model as a local inference service in [`models/inference_engine.py`](models/inference_engine.py).
+
+- Loads the PyTorch Geometric graph tensors and trained `ThreatGNN` weights.
+- Computes a class-1 threat probability for every device node.
+- Maps each prediction to `CRITICAL` at `threat_score >= 0.80`, otherwise `HEALTHY`.
+- Bulk-inserts device assessments into `gnn_threat_logs` using Supabase service credentials loaded through `python-dotenv`.
+- Logs the number of successfully persisted assessments and handles Supabase API failures without suppressing the local report.
+
+```bash
+python models/inference_engine.py
+```
+
+### ✅ Stage 6 — Autonomous Remediation Agent
+
+Closed the detection-to-response loop with [`datapipeline/remediation_agent.py`](datapipeline/remediation_agent.py), delivering autonomous policy quarantine and audit streams.
+
+- Polls `gnn_threat_logs` for assessments at or above the `0.80` defense threshold.
+- Upserts `{device_name, status: "QUARANTINED"}` into `network_policy_state` with `device_name` as the conflict key.
+- Emits structured security logs documenting lateral-movement containment.
+- Inserts traceable mitigation evidence into `gnn_mitigation_actions` with the device, action, and triggering score.
+- Publishes threat, quarantine, and mitigation state through Supabase Realtime for dashboard subscribers.
+- Handles malformed records, transient API failures, and operator shutdown without terminating on an unhandled traceback.
+
+```bash
+python datapipeline/remediation_agent.py
+```
 
 ---
 
