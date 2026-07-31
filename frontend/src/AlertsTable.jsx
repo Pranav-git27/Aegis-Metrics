@@ -1,12 +1,5 @@
-// File Location: frontend/src/AlertsTable.jsx
-// Real-time telemetry feed: data grid of active security alerts.
+import { ShieldAlert, Inbox } from 'lucide-react'
 
-import { CheckCircle2, ShieldAlert, Inbox } from 'lucide-react'
-
-/**
- * Tailwind badge classes keyed by risk_level (lowercased).
- * `critical` uses an animated pulsing red badge per spec.
- */
 const RISK_BADGE = {
   critical: 'bg-red-950 text-red-400 border border-red-800 animate-pulse',
   high: 'bg-orange-950 text-orange-400 border border-orange-800',
@@ -14,40 +7,28 @@ const RISK_BADGE = {
   low: 'bg-slate-800 text-slate-300 border border-slate-700',
 }
 
-/**
- * Resolve a normalized risk level string to a known badge key.
- */
-function badgeKey(level) {
-  const k = String(level ?? '').toLowerCase()
-  return RISK_BADGE[k] ? k : 'low'
+const STATUS_BADGE = {
+  CRITICAL: 'bg-red-500/10 text-red-400 border border-red-500/30',
+  QUARANTINED: 'bg-amber-500/10 text-amber-400 border border-amber-500/30',
+  HEALTHY: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30',
 }
 
-/**
- * @param {object} props
- * @param {Array} props.alerts - active alert records
- * @param {boolean} props.isLoading - initial loading state
- * @param {boolean} props.error - fetch failure flag
- * @param {Set<string>} props.resolvingIds - alert_ids currently being resolved
- * @param {Set<string>} props.removingIds - alert_ids animating out (fade)
- * @param {(alertId:string)=>void} props.onResolve
- */
-export default function AlertsTable({
-  alerts,
-  isLoading,
-  error,
-  resolvingIds,
-  removingIds,
-  onResolve,
-}) {
+function riskLevel(score) {
+  if (score >= 0.8) return 'critical'
+  if (score >= 0.5) return 'high'
+  if (score >= 0.2) return 'medium'
+  return 'low'
+}
+
+export default function AlertsTable({ threats = [], isLoading, error }) {
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/60 shadow-lg shadow-black/20 backdrop-blur">
-      {/* Header */}
       <div className="flex items-center justify-between border-b border-slate-800 px-5 py-4">
         <div className="flex items-center gap-2.5">
           <ShieldAlert className="h-5 w-5 text-orange-400" />
           <h2 className="text-sm font-semibold text-white">Active Threat Feed</h2>
           <span className="rounded-full bg-slate-800 px-2 py-0.5 font-mono text-xs text-slate-400">
-            {alerts.length} live
+            {threats.length} live
           </span>
         </div>
         <span className="flex items-center gap-1.5 text-xs text-slate-500">
@@ -55,100 +36,78 @@ export default function AlertsTable({
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
             <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
           </span>
-          streaming
+          realtime
         </span>
       </div>
 
-      {/* Body */}
       <div className="max-h-[28rem] overflow-auto">
         {isLoading ? (
           <TableSkeleton />
         ) : error ? (
           <ErrorState />
-        ) : alerts.length === 0 ? (
+        ) : threats.length === 0 ? (
           <EmptyState />
         ) : (
           <table className="w-full border-collapse text-left text-sm">
             <thead className="sticky top-0 z-10 bg-slate-900/95 backdrop-blur">
               <tr className="text-xs uppercase tracking-wider text-slate-500">
-                <th className="px-5 py-3 font-medium">Alert ID</th>
-                <th className="px-5 py-3 font-medium">Log ID</th>
+                <th className="px-5 py-3 font-medium">Threat ID</th>
+                <th className="px-5 py-3 font-medium">Device Name</th>
                 <th className="px-5 py-3 font-medium">Risk Level</th>
-                <th className="px-5 py-3 font-medium">Anomaly Score</th>
-                <th className="px-5 py-3 text-right font-medium">Action</th>
+                <th className="px-5 py-3 font-medium">Threat Score</th>
+                <th className="px-5 py-3 font-medium">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/70">
-              {alerts.map((alert) => {
-                const id = alert.alert_id
-                const isResolving = resolvingIds.has(id)
-                const isRemoving = removingIds.has(id)
-                const score = Number(alert.anomaly_score ?? 0)
-                // anomaly_score is a 0–1 decimal; convert to a 0–100
-                // percentage so the progress bar fills proportionally.
-                const scorePct = Math.min(100, Math.max(0, score * 100))
-                const bk = badgeKey(alert.risk_level)
-
+              {threats.map((t) => {
+                const risk = riskLevel(t.threat_score)
+                const statusKey = t.status?.toUpperCase()
+                const statusStyle = STATUS_BADGE[statusKey] || STATUS_BADGE.CRITICAL
                 return (
                   <tr
-                    key={id}
-                    className={`group transition-colors hover:bg-slate-800/40 ${
-                      isRemoving ? 'animate-fade-out' : 'animate-fade-in'
-                    }`}
+                    key={t.id}
+                    className="animate-fade-in transition-colors hover:bg-slate-800/40"
                   >
                     <td className="whitespace-nowrap px-5 py-3.5 font-mono text-xs text-slate-300">
-                      {id}
+                      {t.id?.slice(0, 8)}…
                     </td>
-                    <td className="whitespace-nowrap px-5 py-3.5 font-mono text-xs text-slate-500">
-                      {alert.log_id ?? '—'}
+                    <td className="whitespace-nowrap px-5 py-3.5 font-mono text-xs text-slate-200">
+                      {t.device_name ?? '—'}
                     </td>
                     <td className="px-5 py-3.5">
                       <span
-                        className={`inline-flex items-center rounded-md px-2.5 py-1 text-xs font-semibold uppercase tracking-wide ${RISK_BADGE[bk]}`}
+                        className={`inline-flex items-center rounded-md px-2.5 py-1 text-xs font-semibold uppercase tracking-wide ${RISK_BADGE[risk]}`}
                       >
-                        {alert.risk_level ?? 'unknown'}
+                        {risk}
                       </span>
                     </td>
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-2.5">
                         <span className="font-mono text-xs font-semibold text-slate-200 tabular-nums">
-                          {score.toFixed(2)}
+                          {Number(t.threat_score ?? 0).toFixed(4)}
                         </span>
                         <div className="h-1.5 w-20 overflow-hidden rounded-full bg-slate-800">
                           <div
                             className={`h-full rounded-full ${
-                              bk === 'critical'
+                              risk === 'critical'
                                 ? 'bg-red-500'
-                                : bk === 'high'
+                                : risk === 'high'
                                   ? 'bg-orange-500'
-                                  : bk === 'medium'
+                                  : risk === 'medium'
                                     ? 'bg-yellow-500'
                                     : 'bg-slate-500'
                             }`}
-                            style={{ width: `${scorePct}%` }}
+                            style={{ width: `${Math.min(100, (t.threat_score ?? 0) * 100)}%` }}
                           />
                         </div>
                       </div>
                     </td>
-                    <td className="px-5 py-3.5 text-right">
-                      <button
-                        type="button"
-                        onClick={() => onResolve(id)}
-                        disabled={isResolving || isRemoving}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800/80 px-3 py-1.5 text-xs font-medium text-slate-200 transition-all hover:border-emerald-600 hover:bg-emerald-600/10 hover:text-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
+                    <td className="px-5 py-3.5">
+                      <span
+                        className={`inline-flex items-center rounded-md px-2.5 py-1 text-xs font-semibold uppercase tracking-wide ${statusStyle}`}
                       >
-                        {isResolving ? (
-                          <>
-                            <span className="h-3 w-3 animate-spin rounded-full border-2 border-slate-500 border-t-transparent" />
-                            Resolving
-                          </>
-                        ) : (
-                          <>
-                            <CheckCircle2 className="h-3.5 w-3.5" />
-                            Resolve
-                          </>
-                        )}
-                      </button>
+                        {statusKey ?? 'CRITICAL'}
+                      </span>
                     </td>
                   </tr>
                 )
@@ -184,7 +143,7 @@ function ErrorState() {
       <div>
         <p className="text-sm font-semibold text-red-300">Failed to load threat feed</p>
         <p className="mt-1 text-xs text-slate-500">
-          The backend may be unreachable. Retrying automatically…
+          Supabase Realtime connection degraded. Retrying…
         </p>
       </div>
     </div>
@@ -198,9 +157,9 @@ function EmptyState() {
         <Inbox className="h-6 w-6 text-emerald-400" />
       </div>
       <div>
-        <p className="text-sm font-semibold text-slate-200">No active alerts</p>
+        <p className="text-sm font-semibold text-slate-200">No active threats</p>
         <p className="mt-1 text-xs text-slate-500">
-          All clear. The system is monitoring for new threats.
+          All clear. The GNN model is monitoring for new anomalies.
         </p>
       </div>
     </div>

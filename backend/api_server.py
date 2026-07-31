@@ -35,8 +35,14 @@ def health_check() -> Dict[str, str]:
 @app.get("/api/v1/analytics/overview")
 def get_analytics_overview() -> Dict[str, Any]:
     """
-    Returns aggregated dashboard statistics by querying the
-    `dashboard_metrics` database view.
+    Returns aggregated dashboard statistics by querying Supabase directly.
+
+    - total_logs              : count of rows in system_logs
+    - total_alerts            : count of rows in gnn_threat_logs
+    - anomaly_rate_percentage : (total_alerts / total_logs) * 100, guarded
+                                against division by zero
+    - quarantined_devices     : count of rows in network_policy_state where
+                                status = 'QUARANTINED'
     """
     # Defensive: dev/mock mode when the Supabase client is unavailable.
     if supabase is None:
@@ -44,22 +50,36 @@ def get_analytics_overview() -> Dict[str, Any]:
         return {
             "total_logs": 0,
             "total_alerts": 0,
-            "anomaly_rate_percentage": None,
-            "critical_alerts_count": 0,
+            "anomaly_rate_percentage": 0.0,
+            "quarantined_devices": 0,
         }
 
     try:
-        response = supabase.table("dashboard_metrics").select("*").execute()
-        data = response.data
-        if data and len(data) > 0:
-            return data[0]
-        # View returned no rows: return a sensible zeroed default.
-        logger.info("dashboard_metrics view returned no rows. Returning default zeros.")
+        def _count(table_name: str, apply_filter=None) -> int:
+            query = supabase.table(table_name).select("*", count="exact")
+            if apply_filter:
+                query = apply_filter(query)
+            response = query.execute()
+            return response.count if response.count is not None else 0
+
+        total_logs = _count("system_logs")
+        total_alerts = _count("gnn_threat_logs")
+        quarantined_devices = _count(
+            "network_policy_state",
+            lambda q: q.eq("status", "QUARANTINED"),
+        )
+
+        anomaly_rate_percentage = 0.0
+        if total_logs > 0:
+            anomaly_rate_percentage = round(
+                (total_alerts / total_logs) * 100, 2
+            )
+
         return {
-            "total_logs": 0,
-            "total_alerts": 0,
-            "anomaly_rate_percentage": None,
-            "critical_alerts_count": 0,
+            "total_logs": total_logs,
+            "total_alerts": total_alerts,
+            "anomaly_rate_percentage": anomaly_rate_percentage,
+            "quarantined_devices": quarantined_devices,
         }
     except Exception as e:
         logger.error(f"Database error during get_analytics_overview: {e}")
